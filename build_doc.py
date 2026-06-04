@@ -1,119 +1,102 @@
 """
 Builds Gait_Anomaly_Detection_Overview.docx using python-docx.
-Run from the python/ directory after generate_plots.py has been executed.
+Run from the python/ directory after:
+    python generate_gait_data.py
+    python generate_plots.py
+    python generate_preprocessing_plots.py
 """
 
 import os
 from docx import Document
-from docx.shared import Inches, Pt, RGBColor, Cm
+from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
+from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
-import copy
+import math
 
 PLOTS = os.path.join(os.path.dirname(__file__), "plots")
-OUT   = os.path.join(os.path.dirname(__file__), "..", "Gait_Anomaly_Detection_Overview.docx")
+OUT   = os.path.join(os.path.dirname(__file__), "..", "Gait_Anomaly_Detection_Overview_v3.docx")
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# ── Colour palette ─────────────────────────────────────────────────────────────
+BLUE  = RGBColor(0x15, 0x65, 0xC0)
+DARK  = RGBColor(0x22, 0x22, 0x22)
+GREY  = RGBColor(0x55, 0x55, 0x55)
+WHITE = RGBColor(0xFF, 0xFF, 0xFF)
 
-BLUE   = RGBColor(0x15, 0x65, 0xC0)
-DARK   = RGBColor(0x22, 0x22, 0x22)
-GREY   = RGBColor(0x55, 0x55, 0x55)
-WHITE  = RGBColor(0xFF, 0xFF, 0xFF)
-LTBLUE = RGBColor(0xBB, 0xDE, 0xFB)
-
+# ── Helpers ────────────────────────────────────────────────────────────────────
 
 def set_cell_bg(cell, hex_color):
-    tc = cell._tc
+    tc   = cell._tc
     tcPr = tc.get_or_add_tcPr()
-    shd = OxmlElement("w:shd")
-    shd.set(qn("w:val"), "clear")
+    shd  = OxmlElement("w:shd")
+    shd.set(qn("w:val"),   "clear")
     shd.set(qn("w:color"), "auto")
-    shd.set(qn("w:fill"), hex_color)
+    shd.set(qn("w:fill"),  hex_color)
     tcPr.append(shd)
 
-
 def set_cell_borders(cell, color="CCCCCC"):
-    tc = cell._tc
-    tcPr = tc.get_or_add_tcPr()
-    tcBorders = OxmlElement("w:tcBorders")
+    tc      = cell._tc
+    tcPr    = tc.get_or_add_tcPr()
+    tcBords = OxmlElement("w:tcBorders")
     for side in ("top", "left", "bottom", "right"):
         el = OxmlElement(f"w:{side}")
-        el.set(qn("w:val"), "single")
-        el.set(qn("w:sz"), "4")
+        el.set(qn("w:val"),   "single")
+        el.set(qn("w:sz"),    "4")
         el.set(qn("w:space"), "0")
         el.set(qn("w:color"), color)
-        tcBorders.append(el)
-    tcPr.append(tcBorders)
+        tcBords.append(el)
+    tcPr.append(tcBords)
 
-
-def add_horizontal_rule(doc, color="DDDDDD"):
-    p = doc.add_paragraph()
+def add_rule(doc, color="DDDDDD"):
+    p    = doc.add_paragraph()
     p.paragraph_format.space_before = Pt(10)
     p.paragraph_format.space_after  = Pt(10)
-    pPr = p._p.get_or_add_pPr()
+    pPr  = p._p.get_or_add_pPr()
     pBdr = OxmlElement("w:pBdr")
-    bottom = OxmlElement("w:bottom")
-    bottom.set(qn("w:val"), "single")
-    bottom.set(qn("w:sz"), "4")
-    bottom.set(qn("w:space"), "1")
-    bottom.set(qn("w:color"), color)
-    pBdr.append(bottom)
+    bot  = OxmlElement("w:bottom")
+    bot.set(qn("w:val"),   "single")
+    bot.set(qn("w:sz"),    "4")
+    bot.set(qn("w:space"), "1")
+    bot.set(qn("w:color"), color)
+    pBdr.append(bot)
     pPr.append(pBdr)
 
-
 def h1(doc, text):
-    p = doc.add_paragraph()
+    p   = doc.add_paragraph()
     p.paragraph_format.space_before = Pt(20)
     p.paragraph_format.space_after  = Pt(6)
     run = p.add_run(text)
-    run.bold = True
-    run.font.size = Pt(16)
-    run.font.color.rgb = BLUE
-    run.font.name = "Arial"
-    # bottom border
-    pPr = p._p.get_or_add_pPr()
+    run.bold = True; run.font.size = Pt(16)
+    run.font.color.rgb = BLUE; run.font.name = "Arial"
+    pPr  = p._p.get_or_add_pPr()
     pBdr = OxmlElement("w:pBdr")
-    bottom = OxmlElement("w:bottom")
-    bottom.set(qn("w:val"), "single")
-    bottom.set(qn("w:sz"), "4")
-    bottom.set(qn("w:space"), "1")
-    bottom.set(qn("w:color"), "1565C0")
-    pBdr.append(bottom)
-    pPr.append(pBdr)
-
+    bot  = OxmlElement("w:bottom")
+    bot.set(qn("w:val"),   "single"); bot.set(qn("w:sz"), "4")
+    bot.set(qn("w:space"), "1");      bot.set(qn("w:color"), "1565C0")
+    pBdr.append(bot); pPr.append(pBdr)
 
 def h2(doc, text):
-    p = doc.add_paragraph()
+    p   = doc.add_paragraph()
     p.paragraph_format.space_before = Pt(12)
     p.paragraph_format.space_after  = Pt(4)
     run = p.add_run(text)
-    run.bold = True
-    run.font.size = Pt(12)
-    run.font.color.rgb = DARK
-    run.font.name = "Arial"
-
+    run.bold = True; run.font.size = Pt(12)
+    run.font.color.rgb = DARK; run.font.name = "Arial"
 
 def body(doc, text):
     p = doc.add_paragraph(text)
     p.paragraph_format.space_before = Pt(3)
     p.paragraph_format.space_after  = Pt(3)
-    for run in p.runs:
-        run.font.size = Pt(10.5)
-        run.font.name = "Arial"
-        run.font.color.rgb = DARK
-
+    for r in p.runs:
+        r.font.size = Pt(10.5); r.font.name = "Arial"; r.font.color.rgb = DARK
 
 def bullet(doc, text):
-    p = doc.add_paragraph(style="List Bullet")
+    p   = doc.add_paragraph(style="List Bullet")
     p.paragraph_format.space_before = Pt(2)
     p.paragraph_format.space_after  = Pt(2)
     run = p.add_run(text)
-    run.font.size = Pt(10.5)
-    run.font.name = "Arial"
-    run.font.color.rgb = DARK
-
+    run.font.size = Pt(10.5); run.font.name = "Arial"; run.font.color.rgb = DARK
 
 def add_image(doc, filename, width_in=6.3):
     path = os.path.join(PLOTS, filename)
@@ -121,73 +104,49 @@ def add_image(doc, filename, width_in=6.3):
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p.paragraph_format.space_before = Pt(6)
     p.paragraph_format.space_after  = Pt(2)
-    run = p.add_run()
-    run.add_picture(path, width=Inches(width_in))
-
+    p.add_run().add_picture(path, width=Inches(width_in))
 
 def caption(doc, text):
     p = doc.add_paragraph(text)
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p.paragraph_format.space_before = Pt(0)
     p.paragraph_format.space_after  = Pt(10)
-    for run in p.runs:
-        run.italic = True
-        run.font.size = Pt(9)
-        run.font.color.rgb = GREY
-        run.font.name = "Arial"
-
+    for r in p.runs:
+        r.italic = True; r.font.size = Pt(9)
+        r.font.color.rgb = GREY; r.font.name = "Arial"
 
 def add_table(doc, headers, rows, col_widths_in):
     t = doc.add_table(rows=1 + len(rows), cols=len(headers))
     t.alignment = WD_TABLE_ALIGNMENT.CENTER
     t.style = "Table Grid"
-
-    # Header row
     hrow = t.rows[0]
     for i, (h, w) in enumerate(zip(headers, col_widths_in)):
-        cell = hrow.cells[i]
-        cell.width = Inches(w)
-        set_cell_bg(cell, "1565C0")
-        set_cell_borders(cell)
-        p = cell.paragraphs[0]
-        p.clear()
-        run = p.add_run(h)
-        run.bold = True
-        run.font.color.rgb = WHITE
-        run.font.size = Pt(10)
-        run.font.name = "Arial"
-
-    # Data rows
+        cell = hrow.cells[i]; cell.width = Inches(w)
+        set_cell_bg(cell, "1565C0"); set_cell_borders(cell)
+        p = cell.paragraphs[0]; p.clear()
+        run = p.add_run(h); run.bold = True
+        run.font.color.rgb = WHITE; run.font.size = Pt(10); run.font.name = "Arial"
     for ri, row_data in enumerate(rows):
         row = t.rows[ri + 1]
-        bg = "F5F9FF" if ri % 2 == 0 else "FFFFFF"
+        bg  = "F5F9FF" if ri % 2 == 0 else "FFFFFF"
         for ci, (val, w) in enumerate(zip(row_data, col_widths_in)):
-            cell = row.cells[ci]
-            cell.width = Inches(w)
-            set_cell_bg(cell, bg)
-            set_cell_borders(cell)
-            p = cell.paragraphs[0]
-            p.clear()
+            cell = row.cells[ci]; cell.width = Inches(w)
+            set_cell_bg(cell, bg); set_cell_borders(cell)
+            p = cell.paragraphs[0]; p.clear()
             run = p.add_run(val)
-            run.font.size = Pt(10)
-            run.font.name = "Arial"
-            run.font.color.rgb = DARK
-
-    doc.add_paragraph()  # spacing after table
-
+            run.font.size = Pt(10); run.font.name = "Arial"; run.font.color.rgb = DARK
+    doc.add_paragraph()
 
 # ── Build document ─────────────────────────────────────────────────────────────
 
 doc = Document()
-
-# Page margins
 for section in doc.sections:
     section.top_margin    = Inches(1.0)
     section.bottom_margin = Inches(1.0)
     section.left_margin   = Inches(1.1)
     section.right_margin  = Inches(1.1)
 
-# ── Title block ───────────────────────────────────────────────────────────────
+# ── Title ──────────────────────────────────────────────────────────────────────
 p = doc.add_paragraph()
 p.alignment = WD_ALIGN_PARAGRAPH.CENTER
 p.paragraph_format.space_before = Pt(24)
@@ -198,7 +157,7 @@ r.bold = True; r.font.size = Pt(26); r.font.color.rgb = BLUE; r.font.name = "Ari
 p = doc.add_paragraph()
 p.alignment = WD_ALIGN_PARAGRAPH.CENTER
 p.paragraph_format.space_after = Pt(4)
-r = p.add_run("Technical Overview: Simulated Waveforms, Autoencoder Model & Enrolment")
+r = p.add_run("Technical Overview: Waveforms, FFT Preprocessing, Autoencoder Architecture & Enrolment")
 r.font.size = Pt(12); r.font.color.rgb = GREY; r.font.name = "Arial"
 
 p = doc.add_paragraph()
@@ -207,9 +166,11 @@ p.paragraph_format.space_after = Pt(18)
 r = p.add_run("June 2026")
 r.font.size = Pt(10); r.font.color.rgb = GREY; r.font.name = "Arial"
 
-add_horizontal_rule(doc)
+add_rule(doc)
 
-# ── Section 1: Waveforms ──────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 1 — Simulated Gait Waveforms
+# ══════════════════════════════════════════════════════════════════════════════
 h1(doc, "1.  Simulated Gait Waveforms")
 body(doc, "The system simulates a 3-axis accelerometer mounted on the lower back at 50 Hz. Each axis captures a different component of the walking motion:")
 bullet(doc, "acc_x — forward/backward oscillation as the body's centre of mass pitches")
@@ -221,17 +182,17 @@ add_image(doc, "comparison_vertical.png", width_in=6.3)
 caption(doc, "Figure 1 — Vertical acceleration (acc_z) for all five gait types over 4 seconds.")
 
 h2(doc, "1.1  Normal Walking")
-body(doc, "Step frequency: ~1.9 Hz (cadence ~114 steps/min). The vertical axis shows a strong fundamental and a second harmonic at double frequency, reflecting heel-strike followed by toe-off within each step cycle. Forward and lateral axes have lower amplitude and are phase-shifted relative to vertical.")
+body(doc, "Step frequency: ~1.9 Hz (cadence ~114 steps/min). The vertical axis shows a strong fundamental and a second harmonic at double frequency, reflecting heel-strike followed by toe-off within each step cycle.")
 add_image(doc, "normal_walking_waveform.png", width_in=6.3)
 caption(doc, "Figure 2 — Normal walking: regular, symmetric oscillations across all three axes.")
 
 h2(doc, "1.2  Limping")
-body(doc, "Step frequency: ~1.7 Hz. Every alternate step has a significantly reduced amplitude (modelled by a half-step-rate modulator). This creates a characteristic paired pattern — one strong step followed by one weak step — visible as amplitude doubling in the period of the signal.")
+body(doc, "Step frequency: ~1.7 Hz. Every alternate step has a significantly reduced amplitude (modelled by a half-step-rate modulator), creating a characteristic paired pattern — one strong step followed by one weak step.")
 add_image(doc, "limping_waveform.png", width_in=6.3)
 caption(doc, "Figure 3 — Limping: alternating high/low amplitude steps produce an asymmetric envelope.")
 
 h2(doc, "1.3  Shuffling")
-body(doc, "Step frequency: ~1.4 Hz. The vertical oscillation amplitude is reduced by approximately 80% compared to normal walking. This reflects the reduced heel clearance and lack of push-off characteristic of shuffling gait (e.g. Parkinson's disease or extreme fatigue). The signal closely resembles noise around the gravity baseline.")
+body(doc, "Step frequency: ~1.4 Hz. The vertical oscillation amplitude is reduced by approximately 80% compared to normal walking, reflecting the reduced heel clearance and lack of push-off characteristic of shuffling gait.")
 add_image(doc, "shuffling_waveform.png", width_in=6.3)
 caption(doc, "Figure 4 — Shuffling: minimal vertical oscillation; signal barely deviates from the gravity baseline.")
 
@@ -241,99 +202,175 @@ add_image(doc, "running_waveform.png", width_in=6.3)
 caption(doc, "Figure 5 — Running: higher cadence and much larger amplitude than normal walking.")
 
 h2(doc, "1.5  Ataxic")
-body(doc, "Ataxic gait is modelled with a phase-jitter process: the instantaneous frequency is perturbed at each time step via a cumulative phase noise term, and amplitude fluctuates randomly. The result is an irregular, unpredictable waveform that lacks the consistent periodicity of normal gait.")
+body(doc, "Ataxic gait is modelled with a phase-jitter process: the instantaneous frequency is randomly perturbed at each time step via a cumulative noise term, and amplitude fluctuates randomly, producing an irregular and unpredictable waveform.")
 add_image(doc, "ataxic_waveform.png", width_in=6.3)
 caption(doc, "Figure 6 — Ataxic: irregular timing and variable amplitude distinguish it from all periodic patterns.")
 
-add_horizontal_rule(doc)
+add_rule(doc)
 
-# ── Section 2: Autoencoder ────────────────────────────────────────────────────
-h1(doc, "2.  Autoencoder for Anomaly Detection")
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 2 — FFT Preprocessing Pipeline
+# ══════════════════════════════════════════════════════════════════════════════
+h1(doc, "2.  FFT Preprocessing Pipeline")
+body(doc, "Before being fed into the encoder, each raw accelerometer window passes through a three-stage preprocessing pipeline. The same pipeline is implemented identically in Python (generate_gait_data.py) and Kotlin (GaitFeatureExtractor.kt + FFT.kt) to ensure the on-device feature distribution exactly matches training.")
 
-h2(doc, "2.1  What is an autoencoder?")
-body(doc, "An autoencoder is a neural network trained to compress an input into a compact representation (the bottleneck) and then reconstruct the original input from that representation. Because it is trained exclusively on normal examples, it learns the statistical structure of normal data well. When presented with anomalous data it has never seen during training, it produces a poor reconstruction — indicated by a high mean-squared error (MSE) between the input and the output. This reconstruction error serves directly as the anomaly score: the higher the error, the more anomalous the input is considered to be.")
+add_image(doc, "preprocessing_pipeline.png", width_in=6.5)
+caption(doc, "Figure 7 — The three preprocessing stages applied to the vertical axis of a normal walking window.")
 
-h2(doc, "2.2  Architecture")
-body(doc, "The model operates on an 18-element feature vector extracted from each 2.56-second window of accelerometer data. The architecture is a symmetric dense network:")
+h2(doc, "2.1  Stage 1 — Z-score normalisation  (scale invariance)")
+body(doc, "Each axis of the 128-sample window is independently Z-score normalised:")
+body(doc, "        x_norm = ( x  −  mean(x) )  /  std(x)")
+body(doc, "This removes any DC offset and amplitude scaling due to walking speed, step length, or sensor gain differences between individuals and sessions. After this step the signal always has zero mean and unit variance regardless of how energetically the person walks. Because the mean is zero, the DC component of the subsequent FFT (bin 0) is always zero and carries no information.")
+
+h2(doc, "2.2  Stage 2 — FFT magnitude spectrum  (phase invariance)")
+body(doc, "The real FFT of the normalised window is computed, producing 65 complex coefficients (bins 0 to 64 for a 128-point transform at 50 Hz, giving a frequency resolution of 50/128 ≈ 0.39 Hz per bin). Only the magnitude |FFT(x_norm)| is retained:")
+body(doc, "        mag[k]  =  | FFT(x_norm)[k] |")
+body(doc, "Discarding the phase information makes the feature vector invariant to the exact timing offset of the gait cycle within the window. Two windows that capture identical stepping motion but starting at different points in the stride cycle will produce the same magnitude spectrum, and therefore the same embedding.")
+
+h2(doc, "2.3  Stage 3 — Frequency tuning  (frequency invariance)")
+body(doc, "Different people walk at different cadences (typically 100–140 steps/min), and the same person may vary their cadence between sessions. Without correction, these cadence differences would shift all harmonic peaks to different FFT bins, causing large L2 distances between embeddings of the same person walking at slightly different speeds.")
+body(doc, "The tuning step resamples the magnitude spectrum so that the dominant (fundamental) frequency peak always lands at a fixed reference bin K_REF = 5, corresponding to approximately 1.95 Hz:")
+bullet(doc, "Find the fundamental: locate the peak magnitude bin k_fund by searching within bins [2, 20] (0.78–7.8 Hz), covering slow shuffle to fast running.")
+bullet(doc, "Compute the scale factor: scale = K_REF / k_fund. For a runner (k_fund = 7): scale = 5/7 = 0.714 (spectrum compressed). For a shuffler (k_fund = 4): scale = 5/4 = 1.25 (spectrum stretched).")
+bullet(doc, "Resample via linear interpolation: output bin k samples the original spectrum at position k / scale. This maps the fundamental to K_REF and all subsequent harmonics to 2·K_REF, 3·K_REF, etc., regardless of the original cadence.")
+bullet(doc, "Retain the first N_OUT = 32 bins of the tuned spectrum (capturing the fundamental plus up to six harmonics).")
+
+add_image(doc, "frequency_tuning_comparison.png", width_in=6.5)
+caption(doc, "Figure 8 — Left: raw FFT spectra for all gait types — fundamentals at different frequencies. Right: after tuning, all fundamentals are aligned to bin 5 and harmonics to multiples of 5.")
+
+body(doc, "The 32 tuned bins are computed for each of the three axes (x, y, z) and concatenated to form the final 96-element feature vector fed to the encoder.")
+
+add_rule(doc)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 3 — Autoencoder & Encoder
+# ══════════════════════════════════════════════════════════════════════════════
+h1(doc, "3.  Autoencoder Architecture & Encoder Export")
+
+h2(doc, "3.1  Training objective")
+body(doc, "An autoencoder is trained to reconstruct its input from a compressed bottleneck representation. When trained exclusively on normal gait data, the bottleneck learns a compact manifold of normal gait in feature space. The encoder half of this network — the path from input to bottleneck — is the component used at runtime. It maps the 96-dimensional FFT feature vector to a 12-dimensional embedding vector that captures the essential character of a person's gait pattern.")
+
+h2(doc, "3.2  Architecture")
+body(doc, "The full autoencoder uses a symmetric dense architecture:")
 add_image(doc, "autoencoder_architecture.png", width_in=6.3)
-caption(doc, "Figure 7 — Autoencoder architecture. The 6-neuron bottleneck forces the network to learn a compact representation of normal gait.")
+caption(doc, "Figure 9 — Full autoencoder architecture. Only the shaded encoder portion (left of bottleneck) is exported as gait_encoder.tflite. The decoder is used only during training.")
 
 add_table(doc,
-    headers=["Layer", "Neurons", "Activation"],
+    headers=["Layer", "Neurons", "Activation", "Role"],
     rows=[
-        ["Input",              "18", "—"],
-        ["Encoder (Dense)",    "12", "ReLU"],
-        ["Bottleneck (Dense)", "6",  "ReLU"],
-        ["Decoder (Dense)",    "12", "ReLU"],
-        ["Output (Dense)",     "18", "Linear"],
+        ["Input",              "96",  "—",      "3 axes × 32 tuned FFT bins"],
+        ["Encoder Dense 1",    "48",  "ReLU",   "First compression"],
+        ["Encoder Dense 2",    "24",  "ReLU",   "Second compression"],
+        ["Bottleneck",         "12",  "ReLU",   "Gait identity embedding  ← exported"],
+        ["Decoder Dense 1",    "24",  "ReLU",   "Training only"],
+        ["Decoder Dense 2",    "48",  "ReLU",   "Training only"],
+        ["Output",             "96",  "Linear", "Training only (reconstruction)"],
     ],
-    col_widths_in=[2.8, 1.5, 1.5]
+    col_widths_in=[1.7, 1.1, 1.2, 2.8]
 )
 
-h2(doc, "2.3  Feature extraction")
-body(doc, "Raw samples are grouped into overlapping windows (128 samples, 50% stride). Six statistical features are extracted per axis, giving 18 features total:")
-bullet(doc, "Mean — the DC component; shifts with gravity and orientation")
-bullet(doc, "Standard deviation — measures oscillation intensity")
-bullet(doc, "Minimum and maximum — capture peak excursions")
-bullet(doc, "Root mean square (RMS) — energy of the signal including the mean")
-bullet(doc, "Zero-crossing rate (relative to axis mean) — a proxy for step frequency")
-body(doc, "The feature extraction is implemented identically in both the Python training pipeline (generate_gait_data.py) and the Android app (GaitFeatureExtractor.kt) to ensure the model receives the same input distribution at runtime as it was trained on.")
+h2(doc, "3.3  Training data")
+body(doc, "The autoencoder is trained exclusively on normal gait data from 100 simulated subjects, each with a slightly different step frequency (1.7–2.1 Hz), using MSE reconstruction loss. No anomalous gait is presented during training. After training, the FFT feature vectors are Z-score normalised using training-set statistics, which are exported as scaler_params.json alongside the model.")
 
-h2(doc, "2.4  Training")
-body(doc, "The autoencoder is trained exclusively on normal gait data from 100 simulated subjects, each with a slightly different step frequency (1.7–2.1 Hz). No anomalous examples are used during training. Features are Z-score normalised using the training-set mean and standard deviation, which are exported alongside the model as scaler_params.json.")
+h2(doc, "3.4  Model evaluation")
+body(doc, "After training, the encoder is evaluated by building an enrolment template from the first half of a held-out normal gait recording and computing L2 distances for all gait types against that template. The figure below shows both the resulting distance distributions and the training convergence curve.")
 
-h2(doc, "2.5  Anomaly scoring")
-body(doc, "At inference time, a feature window is normalised, passed through the autoencoder, and the MSE between the normalised input and the reconstruction is computed. This scalar is the anomaly score. Scores below a per-user threshold are classified as normal; scores above are flagged as anomalous.")
+add_image(doc, "evaluation.png", width_in=6.5)
+caption(doc, "Figure 10 — Left: L2 distance distributions from the enrolled template for each gait type, with the suggested threshold (mean + 3σ of normal distances) shown as a red dashed line. Right: MSE reconstruction loss during training.")
 
-add_horizontal_rule(doc)
+h2(doc, "3.4.1  Reading the L2 distance histogram")
+body(doc, "The left panel is the most important diagnostic plot for the system. Each bar represents one feature window from the test set, and its position on the x-axis is its L2 distance from the normal gait template.")
+bullet(doc, "Normal (blue) — tightly clustered near zero (L2 ≈ 2–5). The encoder has learned to map the user’s own gait to a compact, consistent region of embedding space. All normal windows fall well below the threshold of 7.05.")
+bullet(doc, "Running (purple) — also clusters tightly, but at a slightly higher distance (≈5–6). Running shares many structural features with normal walking (regular periodicity, similar harmonic structure after frequency tuning), so the encoder places it close to the normal manifold — but still mostly below threshold, indicating it would not be reliably flagged by this particular threshold setting.")
+bullet(doc, "Limping (pink) — spreads across L2 ≈8–25, almost entirely above the threshold. The asymmetric amplitude envelope introduced by the limp is clearly captured by the encoder as a departure from normal gait.")
+bullet(doc, "Shuffling (yellow) — widely distributed from L2 ≈10 to 40+. The dramatically reduced vertical oscillation and slower cadence place shuffling embeddings far from the normal template, making it the most distinguishable anomaly.")
+bullet(doc, "Ataxic (green) — the most spread-out distribution (L2 ≈15–40). The irregular phase and variable amplitude make each window land in a different region of embedding space, producing high and inconsistent distances from the template.")
 
-# ── Section 3: Enrolment ──────────────────────────────────────────────────────
-h1(doc, "3.  The Enrolment Session")
+h2(doc, "3.4.2  Reading the training curve")
+body(doc, "The right panel shows MSE reconstruction loss against epoch for both the training set (blue) and validation set (orange).")
+bullet(doc, "Both curves drop steeply in the first ∸10 epochs as the autoencoder learns the dominant structure of normal gait (the fundamental frequency and its harmonics in the tuned FFT spectrum).")
+bullet(doc, "The train and validation curves remain close throughout, with no sign of overfitting — the small gap between them is expected and healthy.")
+bullet(doc, "Loss plateaus around epoch 40–50 before early stopping triggers. The final validation MSE of ≈0.53 reflects the residual within-class variation in normal gait across 100 synthetic subjects.")
+bullet(doc, "A lower reconstruction loss does not always mean a better embedding space for identity discrimination. The loss here serves only to ensure the encoder captures meaningful structure; the L2 distance histogram is the true measure of separation quality.")
 
-h2(doc, "3.1  Purpose")
-body(doc, "Although the base autoencoder is trained on a population of simulated walkers, every individual has a unique gait signature. Factors such as walking speed, stride length, posture, phone placement, and natural cadence all affect the reconstruction error for a given person, even when their gait is entirely normal. If a single global threshold were used, it would either generate too many false alarms for people whose normal gait produces slightly higher reconstruction errors, or miss genuine anomalies in people who naturally walk closer to the population mean. The enrolment session solves this by calibrating a personal threshold on the individual's own baseline.")
+h2(doc, "3.5  On-device deployment")
+body(doc, "Only the encoder sub-model is exported to TFLite (gait_encoder.tflite). This takes the 96-element normalised feature vector as input and outputs the 12-element bottleneck embedding. The decoder is discarded after training. This keeps the on-device model small and inference fast — no reconstruction pass is needed at runtime.")
 
-h2(doc, "3.2  What happens during enrolment")
-body(doc, "The user initiates a 30-second enrolment session. During this period:")
-bullet(doc, "The GaitSimulator produces accelerometer samples at 50 Hz, mirroring normal walking.")
-bullet(doc, "Samples are accumulated in a SampleBuffer and processed into overlapping 128-sample windows with a 64-sample stride, yielding ~46 feature windows over 30 seconds.")
-bullet(doc, "Each feature window is passed through the pre-trained autoencoder and the reconstruction error (MSE) is recorded.")
-bullet(doc, "After 30 seconds the mean (μ) and standard deviation (σ) of all collected errors are computed.")
-bullet(doc, "The personal threshold is set to μ + 3σ, capturing 99.7% of the individual's normal-gait error distribution under a Gaussian assumption.")
-bullet(doc, "This threshold is persisted to device storage (Android SharedPreferences) and used for all subsequent detection sessions.")
+add_rule(doc)
 
-h2(doc, "3.3  Why μ + 3σ?")
-body(doc, "A threshold of three standard deviations above the personal mean limits false alarms to approximately 0.15% of normal windows under a Gaussian assumption. In practice, reconstruction errors are right-skewed, so the effective false-alarm rate is even lower. The multiplier is a tunable constant (SIGMA_MULTIPLIER in EnrollmentActivity.kt); reducing it to 2 increases sensitivity at the cost of more false positives.")
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 4 — Enrolment Session
+# ══════════════════════════════════════════════════════════════════════════════
+h1(doc, "4.  The Enrolment Session")
 
-h2(doc, "3.4  What changes after enrolment")
-body(doc, "Nothing in the autoencoder's weights is modified. Enrolment is a threshold-calibration step only, not a fine-tuning step. This design means:")
-bullet(doc, "Enrolment is computationally trivial — it requires only standard forward passes and basic statistics.")
-bullet(doc, "The model does not overfit to a single individual; population-level generalisation is preserved.")
-bullet(doc, "Re-enrolment is fast if the user's gait changes (e.g. after injury or recovery).")
+h2(doc, "4.1  Purpose")
+body(doc, "Enrolment captures a personalised template of the user's gait in the 12-dimensional embedding space. Because the encoder has been trained on population-level normal gait, embeddings for different individuals will cluster in different regions of this space. The template anchors the decision boundary to the specific person, enabling the system to distinguish between that individual (genuine) and anyone else with a different gait pattern (imposter).")
 
-h2(doc, "3.5  Detection after enrolment")
-body(doc, "During a detection session, each new feature window produces an anomaly score that is compared to the personal threshold in real time. The DetectionActivity displays the raw score, a normalised progress bar, and a scrolling history chart with a red dashed threshold line. The status label switches from 'Normal' to 'Anomaly Detected' when the score exceeds the threshold. Users can switch between all five simulated gait types during detection to observe how the score rises for anomalous patterns.")
+h2(doc, "4.2  What happens during enrolment")
+body(doc, "The user initiates a 30-second enrolment session of simulated normal walking. For each 128-sample window (produced every 1.28 s with 50% overlap):")
+bullet(doc, "The GaitSimulator produces accelerometer samples at 50 Hz.")
+bullet(doc, "Each window is accumulated in a SampleBuffer and dispatched when full.")
+bullet(doc, "GaitFeatureExtractor applies the full three-stage pipeline: Z-score normalise → |FFT| → frequency tune → 96-element vector.")
+bullet(doc, "GaitAutoencoder normalises the feature vector using scaler_params.json, then runs a forward pass through the encoder to produce a 12-dimensional embedding.")
+bullet(doc, "All embeddings are collected into a list (~46 embeddings over 30 s).")
+body(doc, "After 30 seconds the session ends and the template is computed.")
 
-add_horizontal_rule(doc)
+h2(doc, "4.3  Template construction")
+body(doc, "The template is the element-wise (vector) mean of all collected embeddings:")
+body(doc, "        template[d]  =  (1/N)  ·  Σ  embedding_i[d]     for d = 0 … 11")
+body(doc, "Taking the mean averages out within-session noise and stride-to-stride variation, producing a stable centroid in embedding space that represents the user's typical gait. If multiple enrolment sessions were provided, the same average could be taken across all sessions to build a more robust template.")
 
-# ── Section 4: Quick Reference ────────────────────────────────────────────────
-h1(doc, "4.  Quick Reference")
+h2(doc, "4.4  Threshold calibration")
+body(doc, "Once the template is fixed, the L2 distance from each individual enrollment embedding to the template is computed:")
+body(doc, "        dist_i  =  ||  embedding_i  −  template  ||₂")
+body(doc, "These distances characterise the natural spread of the user's own gait around their template. The personal threshold is set to:")
+body(doc, "        threshold  =  mean(dist)  +  3 · std(dist)")
+body(doc, "Under a Gaussian assumption this captures 99.7% of genuine presentations, limiting the false rejection rate (FRR) to ~0.15%. The multiplier (SIGMA_MULTIPLIER = 3 in EnrollmentActivity.kt) is tunable: reducing it tightens the boundary and increases sensitivity to subtle anomalies, at the cost of more false rejections of the genuine user.")
+body(doc, "Both the template vector and the threshold are persisted to Android SharedPreferences (template as a JSON float array, threshold as a float).")
+
+h2(doc, "4.5  What changes after enrolment")
+body(doc, "Nothing in the encoder weights is modified. The model continues to use the same learned embedding space; only the reference point (template) and decision boundary (threshold) are personalised. This means:")
+bullet(doc, "Enrolment requires only ~46 encoder forward passes and basic vector arithmetic — it completes in under a second after the 30-second data collection.")
+bullet(doc, "Population-level generalisation of the encoder is preserved; the model is not overfit to one person.")
+bullet(doc, "Re-enrolment is trivial if the user's gait changes permanently (e.g. after surgery or rehabilitation).")
+
+h2(doc, "4.6  Detection after enrolment")
+body(doc, "During a detection session, each new feature window is encoded to a 12-dimensional embedding and the L2 distance to the stored template is computed in real time. The DetectionActivity displays:")
+bullet(doc, "The raw L2 distance as a numerical score.")
+bullet(doc, "A progress bar normalised to 3× the threshold (genuine presentations stay in the lower third).")
+bullet(doc, "A scrolling history chart with a red dashed threshold line.")
+bullet(doc, "A status label: 'Genuine' when L2 ≤ threshold, 'Imposter' when L2 > threshold.")
+body(doc, "Users can switch between all five simulated gait types via the spinner to observe the score rise for patterns dissimilar to their enrolled template.")
+
+add_rule(doc)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SECTION 5 — Quick Reference
+# ══════════════════════════════════════════════════════════════════════════════
+h1(doc, "5.  Quick Reference")
 
 add_table(doc,
     headers=["Parameter", "Value"],
     rows=[
-        ["Sample rate",              "50 Hz"],
-        ["Window size",              "128 samples  (2.56 s)"],
-        ["Window stride",            "64 samples  (50% overlap)"],
-        ["Features per window",      "18  (6 stats × 3 axes)"],
-        ["Autoencoder layers",       "18 → 12 → 6 → 12 → 18"],
-        ["Bottleneck size",          "6 neurons"],
-        ["Training data",            "100 synthetic subjects, normal gait only"],
-        ["Anomaly score metric",     "MSE(normalised input, reconstruction)"],
-        ["Enrolment duration",       "30 seconds (~46 feature windows)"],
-        ["Threshold formula",        "μ + 3σ  of enrolment errors"],
-        ["On-device model update",   "None — threshold calibration only"],
-        ["Supported anomaly types",  "Limping, Shuffling, Running, Ataxic"],
+        ["Sample rate",                "50 Hz"],
+        ["Window size",                "128 samples  (2.56 s)"],
+        ["Window stride",              "64 samples  (50% overlap)"],
+        ["Preprocessing stage 1",      "Z-score normalise per axis  (scale invariance)"],
+        ["Preprocessing stage 2",      "|FFT|  magnitude spectrum  (phase invariance)"],
+        ["Preprocessing stage 3",      "Resample to align fundamental to K_REF = 5  (frequency invariance)"],
+        ["FFT bins per axis",           "32  (tuned, bins 0–31)"],
+        ["Feature vector size",        "96  (3 axes × 32 bins)"],
+        ["Autoencoder architecture",   "96 → 48 → 24 → 12 → 24 → 48 → 96"],
+        ["Embedding (bottleneck) size","12 neurons"],
+        ["On-device model file",       "gait_encoder.tflite  (encoder only)"],
+        ["Training data",              "100 synthetic subjects, normal gait only"],
+        ["Enrolment duration",         "30 seconds  (~46 embedding windows)"],
+        ["Template",                   "Vector mean of all enrolment embeddings"],
+        ["Anomaly score",              "L2 distance: || embedding − template ||₂"],
+        ["Threshold formula",          "mean(L2) + 3σ  of enrolment distances"],
+        ["Genuine / Imposter",         "L2 ≤ threshold  /  L2 > threshold"],
+        ["On-device weight update",    "None — template & threshold calibration only"],
+        ["Supported gait types",       "Normal, Limping, Shuffling, Running, Ataxic"],
     ],
     col_widths_in=[2.5, 4.3]
 )
